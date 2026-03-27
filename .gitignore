@@ -37,8 +37,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Database
-data/
+# Database (apenas na raiz, não em src/)
+/data/
 *.db
 *.db-shm
 *.db-wal
