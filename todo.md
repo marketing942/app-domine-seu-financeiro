@@ -18,3 +18,7 @@
 
 ## Bug Fix v5
 - [x] Corrigir URL do botão de compartilhar no WhatsApp (link incorreto)
+
+## Melhorias v5
+- [x] Página "Conheça o APP Life Board" na sidebar (acima de Configurações)
+- [x] Página "Como utilizar?" com documentação completa do app (acima de Configurações)

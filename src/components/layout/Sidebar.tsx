@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useRef, useState } from 'react';
 import {
   LayoutDashboard, ArrowLeftRight, Tag, PieChart, TrendingUp, Building2,
-  FileBarChart, Bell, Settings, LogOut, DollarSign, Camera, User, Loader2
+  FileBarChart, Bell, Settings, LogOut, DollarSign, Camera, User, Loader2,
+  BookOpen, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/hooks/use-session';
@@ -22,7 +23,9 @@ const NAV_ITEMS = [
 ];
 
 const BOTTOM_ITEMS = [
-  { href: '/settings', label: 'Configurações', icon: Settings },
+  { href: '/lifeboard', label: 'Conheça o Life Board', icon: Sparkles, highlight: true },
+  { href: '/how-to-use', label: 'Como utilizar?', icon: BookOpen, highlight: false },
+  { href: '/settings', label: 'Configurações', icon: Settings, highlight: false },
 ];
 
 interface SidebarProps {
@@ -44,7 +47,6 @@ function AvatarUploader({ name }: { name: string }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Valida tamanho (máx 2MB)
     if (file.size > 2 * 1024 * 1024) {
       alert('A imagem deve ter no máximo 2MB.');
       return;
@@ -52,14 +54,12 @@ function AvatarUploader({ name }: { name: string }) {
 
     setUploading(true);
     try {
-      // Converte para base64 e redimensiona via canvas
       const dataUrl = await resizeImage(file, 200);
       await updateAvatar(dataUrl);
     } catch {
       alert('Erro ao atualizar foto. Tente novamente.');
     } finally {
       setUploading(false);
-      // Limpa o input para permitir re-upload do mesmo arquivo
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
@@ -68,9 +68,7 @@ function AvatarUploader({ name }: { name: string }) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const reader = new FileReader();
-      reader.onload = e => {
-        img.src = e.target?.result as string;
-      };
+      reader.onload = e => { img.src = e.target?.result as string; };
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const ratio = Math.min(maxSize / img.width, maxSize / img.height);
@@ -90,7 +88,6 @@ function AvatarUploader({ name }: { name: string }) {
 
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-4 border-b border-gray-200 dark:border-gray-800">
-      {/* Avatar clicável */}
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
@@ -99,11 +96,7 @@ function AvatarUploader({ name }: { name: string }) {
       >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt={name}
-            className="w-full h-full object-cover"
-          />
+          <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
             <span className="text-xl font-bold text-primary-700 dark:text-primary-300 select-none">
@@ -111,8 +104,6 @@ function AvatarUploader({ name }: { name: string }) {
             </span>
           </div>
         )}
-
-        {/* Overlay de câmera ao hover */}
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           {uploading
             ? <Loader2 size={20} className="text-white animate-spin" />
@@ -120,13 +111,9 @@ function AvatarUploader({ name }: { name: string }) {
           }
         </div>
       </button>
-
-      {/* Nome e email */}
       <div className="text-center min-w-0 w-full">
         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{name}</p>
       </div>
-
-      {/* Input de arquivo oculto */}
       <input
         ref={fileInputRef}
         type="file"
@@ -165,10 +152,10 @@ export default function Sidebar({ user }: SidebarProps) {
         </div>
       </div>
 
-      {/* Avatar + nome do usuário */}
+      {/* Avatar + nome */}
       <AvatarUploader name={user.name} />
 
-      {/* Nav */}
+      {/* Nav principal */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
@@ -190,10 +177,27 @@ export default function Sidebar({ user }: SidebarProps) {
         })}
       </nav>
 
-      {/* Bottom */}
+      {/* Bottom: Life Board, Como usar, Configurações, Sair */}
       <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-800 space-y-1">
-        {BOTTOM_ITEMS.map(({ href, label, icon: Icon }) => {
+        {BOTTOM_ITEMS.map(({ href, label, icon: Icon, highlight }) => {
           const active = pathname === href;
+          if (highlight) {
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
+                    : 'text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20'
+                )}
+              >
+                <Icon size={18} />
+                {label}
+              </Link>
+            );
+          }
           return (
             <Link
               key={href}
