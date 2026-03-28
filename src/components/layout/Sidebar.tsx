@@ -31,7 +31,11 @@ export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
 
   async function handleLogout() {
-    await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'logout' }),
+    });
     window.location.href = '/login';
   }
 
@@ -51,17 +55,20 @@ export default function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
-            <Link key={href} href={href}
+            <Link
+              key={href}
+              href={href}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 active
                   ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-              )}>
+              )}
+            >
               <Icon size={18} className={active ? 'text-primary-600 dark:text-primary-400' : ''} />
               {label}
             </Link>
@@ -74,20 +81,26 @@ export default function Sidebar({ user }: SidebarProps) {
         {BOTTOM_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
-            <Link key={href} href={href}
+            <Link
+              key={href}
+              href={href}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 active
                   ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-              )}>
+              )}
+            >
               <Icon size={18} />
               {label}
             </Link>
           );
         })}
-        <button onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        >
           <LogOut size={18} />
           Sair
         </button>
