@@ -38,31 +38,64 @@ function AppFooter() {
   const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
 
   return (
-    <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
-      {/* Crédito do idealizador */}
-      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-        <span>Idealizador do App:</span>
-        <a
-          href="https://www.instagram.com/prof.evertonmota"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 font-medium transition-colors"
-        >
-          <Instagram size={13} />
-          @prof.evertonmota
-        </a>
+    <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5">
+      {/* Linha superior: créditos */}
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-400 dark:text-gray-500 mb-2">
+        <span className="flex items-center gap-1">
+          Idealizador:&nbsp;
+          <a
+            href="https://www.instagram.com/prof.evertonmota"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-0.5 text-pink-500 hover:text-pink-600 dark:text-pink-400 dark:hover:text-pink-300 font-medium transition-colors"
+          >
+            <Instagram size={11} />
+            @prof.evertonmota
+          </a>
+        </span>
+
+        <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">·</span>
+
+        <span className="flex items-center gap-1">
+          Designer:&nbsp;
+          <a
+            href="https://www.instagram.com/itallomota1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-0.5 text-pink-500 hover:text-pink-600 dark:text-pink-400 dark:hover:text-pink-300 font-medium transition-colors"
+          >
+            <Instagram size={11} />
+            @itallomota1
+          </a>
+        </span>
+
+        <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">·</span>
+
+        <span className="flex items-center gap-1">
+          Desenvolvedor:&nbsp;
+          <a
+            href="https://manus.im"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+          >
+            Manus AI
+          </a>
+        </span>
       </div>
 
-      {/* Botão compartilhar no WhatsApp */}
-      <a
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-1.5 text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors shadow-sm"
-      >
-        <Share2 size={12} />
-        Compartilhar no WhatsApp
-      </a>
+      {/* Linha inferior: botão compartilhar */}
+      <div className="flex justify-center">
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors shadow-sm"
+        >
+          <Share2 size={12} />
+          Compartilhar no WhatsApp
+        </a>
+      </div>
     </footer>
   );
 }

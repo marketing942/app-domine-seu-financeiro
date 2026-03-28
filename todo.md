@@ -6,3 +6,7 @@
 ## Melhorias v2
 - [x] Rodapé global com crédito do idealizador (link Instagram) e botão de compartilhar no WhatsApp
 - [x] Saudação dinâmica no Dashboard (Bom dia/Boa tarde/Boa noite + nome do usuário + horário em tempo real + data)
+
+## Melhorias v3
+- [x] Adicionar Designer (Itallo Mota) e Desenvolvedor (Manus) no rodapé
+- [x] Foto de perfil no canto superior esquerdo da sidebar com opção de upload

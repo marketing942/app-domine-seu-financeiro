@@ -86,6 +86,9 @@ export async function initDb() {
       PRIMARY KEY (id, user_id)
     )
   `;
+  // Adiciona coluna avatar_url se não existir (migração segura)
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`;
+
   await sql`
     CREATE TABLE IF NOT EXISTS password_reset_codes (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -116,6 +119,14 @@ export async function createUser(name: string, email: string, passwordHash: stri
 
 export async function updateUserPassword(userId: number, passwordHash: string) {
   await sql`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${userId}`;
+}
+
+export async function updateUserAvatar(userId: number, avatarUrl: string | null) {
+  await sql`UPDATE users SET avatar_url = ${avatarUrl} WHERE id = ${userId}`;
+}
+
+export async function updateUserName(userId: number, name: string) {
+  await sql`UPDATE users SET name = ${name} WHERE id = ${userId}`;
 }
 
 // ─── Reset de senha ───────────────────────────────────────────────────────────

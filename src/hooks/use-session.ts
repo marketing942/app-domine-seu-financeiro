@@ -1,48 +1,87 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface SessionUser {
   id: number;
   name: string;
   email: string;
+  avatarUrl: string | null;
 }
 
 interface UseSessionResult {
   user: SessionUser | null;
   loading: boolean;
+  updateAvatar: (avatarUrl: string | null) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 let cachedUser: SessionUser | null = null;
 let cacheLoaded = false;
+const listeners: Array<() => void> = [];
 
-export function useSession(): UseSessionResult {
-  const [user, setUser] = useState<SessionUser | null>(cachedUser);
-  const [loading, setLoading] = useState(!cacheLoaded);
+function notifyListeners() {
+  listeners.forEach(fn => fn());
+}
 
-  useEffect(() => {
-    if (cacheLoaded) {
-      setUser(cachedUser);
-      setLoading(false);
-      return;
-    }
-    fetch('/api/auth', {
+async function fetchMe(): Promise<SessionUser | null> {
+  try {
+    const res = await fetch('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'me' }),
-    })
-      .then(r => r.json())
-      .then(data => {
-        cachedUser = data.user ?? null;
-        cacheLoaded = true;
-        setUser(cachedUser);
-      })
-      .catch(() => {
-        cacheLoaded = true;
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
+    });
+    const data = await res.json();
+    return data.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function useSession(): UseSessionResult {
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    const fn = () => forceUpdate(n => n + 1);
+    listeners.push(fn);
+    return () => {
+      const idx = listeners.indexOf(fn);
+      if (idx !== -1) listeners.splice(idx, 1);
+    };
   }, []);
 
-  return { user, loading };
+  useEffect(() => {
+    if (cacheLoaded) return;
+    fetchMe().then(user => {
+      cachedUser = user;
+      cacheLoaded = true;
+      notifyListeners();
+    });
+  }, []);
+
+  const updateAvatar = useCallback(async (avatarUrl: string | null) => {
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update-avatar', avatarUrl }),
+    });
+    if (cachedUser) {
+      cachedUser = { ...cachedUser, avatarUrl };
+      notifyListeners();
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const user = await fetchMe();
+    cachedUser = user;
+    cacheLoaded = true;
+    notifyListeners();
+  }, []);
+
+  return {
+    user: cachedUser,
+    loading: !cacheLoaded,
+    updateAvatar,
+    refreshUser,
+  };
 }

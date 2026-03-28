@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useRef, useState } from 'react';
 import {
   LayoutDashboard, ArrowLeftRight, Tag, PieChart, TrendingUp, Building2,
-  FileBarChart, Bell, Settings, LogOut, DollarSign
+  FileBarChart, Bell, Settings, LogOut, DollarSign, Camera, User, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSession } from '@/hooks/use-session';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -27,6 +29,115 @@ interface SidebarProps {
   user: { id: number; name: string; email: string };
 }
 
+function AvatarUploader({ name }: { name: string }) {
+  const { user, updateAvatar } = useSession();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const initials = name
+    .split(' ')
+    .slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? '')
+    .join('');
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Valida tamanho (máx 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 2MB.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Converte para base64 e redimensiona via canvas
+      const dataUrl = await resizeImage(file, 200);
+      await updateAvatar(dataUrl);
+    } catch {
+      alert('Erro ao atualizar foto. Tente novamente.');
+    } finally {
+      setUploading(false);
+      // Limpa o input para permitir re-upload do mesmo arquivo
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  async function resizeImage(file: File, maxSize: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = e => {
+        img.src = e.target?.result as string;
+      };
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const avatarUrl = user?.avatarUrl ?? null;
+
+  return (
+    <div className="flex flex-col items-center gap-2 px-4 py-4 border-b border-gray-200 dark:border-gray-800">
+      {/* Avatar clicável */}
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="relative group w-16 h-16 rounded-full overflow-hidden ring-2 ring-primary-200 dark:ring-primary-800 hover:ring-primary-400 dark:hover:ring-primary-500 transition-all focus:outline-none focus:ring-primary-500"
+        title="Clique para trocar a foto"
+      >
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt={name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+            <span className="text-xl font-bold text-primary-700 dark:text-primary-300 select-none">
+              {initials || <User size={24} />}
+            </span>
+          </div>
+        )}
+
+        {/* Overlay de câmera ao hover */}
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          {uploading
+            ? <Loader2 size={20} className="text-white animate-spin" />
+            : <Camera size={20} className="text-white" />
+          }
+        </div>
+      </button>
+
+      {/* Nome e email */}
+      <div className="text-center min-w-0 w-full">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{name}</p>
+      </div>
+
+      {/* Input de arquivo oculto */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+    </div>
+  );
+}
+
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
 
@@ -42,9 +153,9 @@ export default function Sidebar({ user }: SidebarProps) {
   return (
     <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shrink-0">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center">
+          <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center shrink-0">
             <DollarSign size={20} className="text-white" />
           </div>
           <div>
@@ -53,6 +164,9 @@ export default function Sidebar({ user }: SidebarProps) {
           </div>
         </div>
       </div>
+
+      {/* Avatar + nome do usuário */}
+      <AvatarUploader name={user.name} />
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -105,9 +219,8 @@ export default function Sidebar({ user }: SidebarProps) {
           Sair
         </button>
 
-        {/* User info */}
-        <div className="mt-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{user.name}</p>
+        {/* Email do usuário */}
+        <div className="mt-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
         </div>
       </div>

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12);
     const userId = await db.createUser(name, email, passwordHash);
     const token = signToken({ userId, email });
-    const res = NextResponse.json({ success: true, user: { id: userId, name, email } });
+    const res = NextResponse.json({ success: true, user: { id: userId, name, email, avatarUrl: null } });
     res.cookies.set(setAuthCookie(token));
     return res;
   }
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     if (!valid)
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 });
     const token = signToken({ userId: user.id, email: user.email });
-    const res = NextResponse.json({ success: true, user: { id: user.id, name: user.name, email: user.email } });
+    const res = NextResponse.json({ success: true, user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatar_url ?? null } });
     res.cookies.set(setAuthCookie(token));
     return res;
   }
@@ -62,7 +62,26 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ user: null });
     const user = await db.getUserById(session.userId);
     if (!user) return NextResponse.json({ user: null });
-    return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email } });
+    return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatar_url ?? null } });
+  }
+
+  if (action === 'update-avatar') {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    const { avatarUrl } = body;
+    // avatarUrl pode ser null (para remover) ou uma string base64/URL
+    await db.updateUserAvatar(session.userId, avatarUrl ?? null);
+    return NextResponse.json({ success: true, avatarUrl: avatarUrl ?? null });
+  }
+
+  if (action === 'update-name') {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    const { name } = body;
+    if (!name || name.trim().length < 2)
+      return NextResponse.json({ error: 'Nome inválido' }, { status: 400 });
+    await db.updateUserName(session.userId, name.trim());
+    return NextResponse.json({ success: true });
   }
 
   if (action === 'change-password') {
