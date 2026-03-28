@@ -31,7 +31,7 @@ export function useAppUI() {
 }
 
 function AppFooter() {
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://dominiodofinanceiro.vercel.app';
+  const appUrl = 'https://app-domine-seu-financeiro-prof-ever-five.vercel.app/login';
   const whatsappText = encodeURIComponent(
     `💰 Estou usando o *Domínio Financeiro* para organizar minhas finanças!\n\nÉ gratuito e muito fácil de usar. Acesse agora: ${appUrl}`
   );

@@ -15,3 +15,6 @@
 - [x] Remover contagem de segundos do relógio no Dashboard (mostrar só HH:MM)
 - [x] Toggle de tema claro/escuro/sistema nas Configurações (aba Aparência)
 - [x] Novo favicon mais elaborado para o app (ícone D$ em fundo azul marinho)
+
+## Bug Fix v5
+- [x] Corrigir URL do botão de compartilhar no WhatsApp (link incorreto)
