@@ -10,3 +10,8 @@
 ## Melhorias v3
 - [x] Adicionar Designer (Itallo Mota) e Desenvolvedor (Manus) no rodapé
 - [x] Foto de perfil no canto superior esquerdo da sidebar com opção de upload
+
+## Melhorias v4
+- [x] Remover contagem de segundos do relógio no Dashboard (mostrar só HH:MM)
+- [x] Toggle de tema claro/escuro/sistema nas Configurações (aba Aparência)
+- [x] Novo favicon mais elaborado para o app (ícone D$ em fundo azul marinho)

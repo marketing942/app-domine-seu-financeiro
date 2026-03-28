@@ -20,7 +20,7 @@ function DashboardHeader() {
 
   useEffect(() => {
     setNow(new Date());
-    const interval = setInterval(() => setNow(new Date()), 1000);
+    const interval = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -31,7 +31,7 @@ function DashboardHeader() {
 
   const firstName = user?.name?.split(' ')[0] ?? '';
 
-  const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const dateStr = now.toLocaleDateString('pt-BR', {
     weekday: 'long',
     day: '2-digit',

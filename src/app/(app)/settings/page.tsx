@@ -2,16 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Eye, EyeOff, User, Lock, LogOut, Trash2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff, User, Lock, LogOut, Sun, Moon, Monitor } from 'lucide-react';
+import { useTheme, type Theme } from '@/hooks/use-theme';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<'profile' | 'password'>('profile');
-
-  // Profile
-  const [name, setName] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [profileMsg, setProfileMsg] = useState('');
+  const { theme, setTheme } = useTheme();
+  const [tab, setTab] = useState<'profile' | 'password' | 'appearance'>('profile');
 
   // Password
   const [currentPassword, setCurrentPassword] = useState('');
@@ -48,16 +45,23 @@ export default function SettingsPage() {
     } finally { setSavingPassword(false); }
   }
 
+  const themeOptions: { value: Theme; label: string; icon: React.ReactNode; desc: string }[] = [
+    { value: 'light', label: 'Claro', icon: <Sun size={20} />, desc: 'Fundo branco, ideal para ambientes iluminados' },
+    { value: 'dark', label: 'Escuro', icon: <Moon size={20} />, desc: 'Fundo escuro, confortável à noite' },
+    { value: 'system', label: 'Sistema', icon: <Monitor size={20} />, desc: 'Segue a preferência do seu dispositivo' },
+  ];
+
   return (
     <div className="max-w-2xl space-y-6">
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800 overflow-x-auto">
         {([
           { key: 'profile', label: 'Perfil', icon: User },
           { key: 'password', label: 'Senha', icon: Lock },
+          { key: 'appearance', label: 'Aparência', icon: Sun },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition ${tab === key ? 'border-primary-600 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === key ? 'border-primary-600 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
             <Icon size={16} /> {label}
           </button>
         ))}
@@ -66,8 +70,9 @@ export default function SettingsPage() {
       {tab === 'profile' && (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
           <h3 className="font-semibold text-gray-900 dark:text-white">Informações do perfil</h3>
-          <p className="text-sm text-gray-500">As alterações de nome serão salvas na próxima versão. Por enquanto, use a recuperação de senha para alterar credenciais.</p>
-          {profileMsg && <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-lg px-4 py-3 text-sm">{profileMsg}</div>}
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Para alterar sua foto de perfil, clique no avatar na barra lateral esquerda. Para alterar a senha, use a aba <strong>Senha</strong>.
+          </p>
         </div>
       )}
 
@@ -108,6 +113,42 @@ export default function SettingsPage() {
               {savingPassword ? 'Salvando...' : 'Alterar senha'}
             </button>
           </form>
+        </div>
+      )}
+
+      {tab === 'appearance' && (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white">Tema do aplicativo</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Escolha como o Domínio Financeiro deve aparecer na sua tela.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {themeOptions.map(({ value, label, icon, desc }) => {
+              const active = theme === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => setTheme(value)}
+                  className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                    active
+                      ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <div className={`p-3 rounded-full ${active ? 'bg-primary-100 dark:bg-primary-800 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                    {icon}
+                  </div>
+                  <div className="text-center">
+                    <p className={`text-sm font-semibold ${active ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-white'}`}>{label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
+                  </div>
+                  {active && (
+                    <div className="w-2 h-2 rounded-full bg-primary-600 dark:bg-primary-400" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
