@@ -1,265 +1,261 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
+import { neon } from '@neondatabase/serverless';
 
-const DB_DIR = process.env.DB_DIR || path.join(process.cwd(), 'data');
-const DB_PATH = path.join(DB_DIR, 'dominio-financeiro.db');
+const sql = neon(process.env.DATABASE_URL!);
 
-let _db: Database.Database | null = null;
-
-export function getDb(): Database.Database {
-  if (_db) return _db;
-  if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
-  _db = new Database(DB_PATH);
-  _db.pragma('journal_mode = WAL');
-  _db.pragma('foreign_keys = ON');
-  initSchema(_db);
-  return _db;
-}
-
-function initSchema(db: Database.Database) {
-  db.exec(`
+// ─── Inicialização das tabelas ────────────────────────────────────────────────
+export async function initDb() {
+  await sql`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
+      email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS categories (
-      id TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
+      id TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
-      icon TEXT NOT NULL,
-      color TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('income','expense','investment')),
-      is_default INTEGER NOT NULL DEFAULT 0,
-      is_favorite INTEGER NOT NULL DEFAULT 0,
-      subcategories TEXT NOT NULL DEFAULT '[]',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
+      icon TEXT NOT NULL DEFAULT 'tag',
+      color TEXT NOT NULL DEFAULT '#6B7280',
+      type TEXT NOT NULL,
+      is_default BOOLEAN DEFAULT FALSE,
+      is_favorite BOOLEAN DEFAULT FALSE,
+      subcategories TEXT DEFAULT '[]',
+      PRIMARY KEY (id, user_id)
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS transactions (
-      id TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('income','expense')),
+      id TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
       description TEXT NOT NULL,
-      amount INTEGER NOT NULL,
-      paid_amount INTEGER,
+      amount NUMERIC NOT NULL,
+      paid_amount NUMERIC,
       category_id TEXT NOT NULL,
       category_name TEXT NOT NULL,
       subcategory_id TEXT,
       due_date TEXT NOT NULL,
       payment_date TEXT,
-      status TEXT NOT NULL,
-      recurrence TEXT NOT NULL DEFAULT '{"type":"once"}',
+      status TEXT NOT NULL DEFAULT 'pending',
+      recurrence TEXT DEFAULT '{"type":"once"}',
       group_id TEXT,
       notes TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
+      PRIMARY KEY (id, user_id)
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS investments (
-      id TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
+      id TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       description TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('emergency','long_term','future_projects')),
-      planned_amount INTEGER NOT NULL DEFAULT 0,
-      actual_amount INTEGER NOT NULL DEFAULT 0,
+      type TEXT NOT NULL,
+      planned_amount NUMERIC NOT NULL DEFAULT 0,
+      actual_amount NUMERIC NOT NULL DEFAULT 0,
       month INTEGER NOT NULL,
       year INTEGER NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
+      PRIMARY KEY (id, user_id)
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS patrimony_items (
-      id TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
+      id TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
-      item_type TEXT NOT NULL CHECK(item_type IN ('asset','liability')),
+      item_type TEXT NOT NULL,
       category TEXT NOT NULL,
-      purchase_value INTEGER NOT NULL DEFAULT 0,
-      appreciation INTEGER NOT NULL DEFAULT 0,
-      depreciation INTEGER NOT NULL DEFAULT 0,
-      debt_value INTEGER NOT NULL DEFAULT 0,
+      purchase_value NUMERIC NOT NULL DEFAULT 0,
+      appreciation NUMERIC NOT NULL DEFAULT 0,
+      depreciation NUMERIC NOT NULL DEFAULT 0,
+      debt_value NUMERIC NOT NULL DEFAULT 0,
       notes TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
+      PRIMARY KEY (id, user_id)
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS monthly_budgets (
-      id TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
+      id TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       category_id TEXT NOT NULL,
       month INTEGER NOT NULL,
       year INTEGER NOT NULL,
-      planned_amount INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE(user_id, category_id, month, year),
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-
+      planned_amount NUMERIC NOT NULL DEFAULT 0,
+      PRIMARY KEY (id, user_id)
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS password_reset_codes (
-      user_id INTEGER NOT NULL,
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       code TEXT NOT NULL,
-      expires_at TEXT NOT NULL,
-      PRIMARY KEY(user_id),
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-  `);
+      expires_at TIMESTAMPTZ NOT NULL
+    )
+  `;
 }
 
-// ─── User helpers ─────────────────────────────────────────────
-export function getUserByEmail(email: string) {
-  return getDb().prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
+// ─── Usuários ─────────────────────────────────────────────────────────────────
+export async function getUserByEmail(email: string) {
+  const rows = await sql`SELECT * FROM users WHERE email = ${email} LIMIT 1`;
+  return rows[0] || null;
 }
 
-export function getUserById(id: number) {
-  return getDb().prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+export async function getUserById(id: number) {
+  const rows = await sql`SELECT * FROM users WHERE id = ${id} LIMIT 1`;
+  return rows[0] || null;
 }
 
-export function createUser(name: string, email: string, passwordHash: string): number {
-  const result = getDb().prepare(
-    'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)'
-  ).run(name, email, passwordHash);
-  return result.lastInsertRowid as number;
+export async function createUser(name: string, email: string, passwordHash: string): Promise<number> {
+  const rows = await sql`
+    INSERT INTO users (name, email, password_hash) VALUES (${name}, ${email}, ${passwordHash})
+    RETURNING id
+  `;
+  return rows[0].id;
 }
 
-export function updateUserPassword(id: number, passwordHash: string) {
-  getDb().prepare('UPDATE users SET password_hash = ?, updated_at = datetime(\'now\') WHERE id = ?').run(passwordHash, id);
+export async function updateUserPassword(userId: number, passwordHash: string) {
+  await sql`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${userId}`;
 }
 
-// ─── Password reset ───────────────────────────────────────────
-export function saveResetCode(userId: number, code: string, expiresAt: string) {
-  getDb().prepare(
-    'INSERT OR REPLACE INTO password_reset_codes (user_id, code, expires_at) VALUES (?, ?, ?)'
-  ).run(userId, code, expiresAt);
+// ─── Reset de senha ───────────────────────────────────────────────────────────
+export async function saveResetCode(userId: number, code: string, expiresAt: string) {
+  await sql`
+    INSERT INTO password_reset_codes (user_id, code, expires_at)
+    VALUES (${userId}, ${code}, ${expiresAt})
+    ON CONFLICT (user_id) DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at
+  `;
 }
 
-export function getResetCode(userId: number) {
-  return getDb().prepare('SELECT * FROM password_reset_codes WHERE user_id = ?').get(userId) as any;
+export async function getResetCode(userId: number) {
+  const rows = await sql`SELECT * FROM password_reset_codes WHERE user_id = ${userId} LIMIT 1`;
+  return rows[0] || null;
 }
 
-export function deleteResetCode(userId: number) {
-  getDb().prepare('DELETE FROM password_reset_codes WHERE user_id = ?').run(userId);
+export async function deleteResetCode(userId: number) {
+  await sql`DELETE FROM password_reset_codes WHERE user_id = ${userId}`;
 }
 
-// ─── Categories ───────────────────────────────────────────────
-export function getUserCategories(userId: number) {
-  return getDb().prepare('SELECT * FROM categories WHERE user_id = ?').all(userId) as any[];
+// ─── Categorias ───────────────────────────────────────────────────────────────
+export async function getUserCategories(userId: number) {
+  return sql`SELECT * FROM categories WHERE user_id = ${userId}`;
 }
 
-export function upsertCategory(data: any) {
-  getDb().prepare(`
-    INSERT INTO categories (id, user_id, name, icon, color, type, is_default, is_favorite, subcategories, updated_at)
-    VALUES (@id, @userId, @name, @icon, @color, @type, @isDefault, @isFavorite, @subcategories, datetime('now'))
-    ON CONFLICT(id) DO UPDATE SET
-      name=excluded.name, icon=excluded.icon, color=excluded.color,
-      is_favorite=excluded.is_favorite, subcategories=excluded.subcategories,
-      updated_at=datetime('now')
-  `).run({
-    id: data.id, userId: data.userId, name: data.name, icon: data.icon,
-    color: data.color, type: data.type, isDefault: data.isDefault ? 1 : 0,
-    isFavorite: data.isFavorite ? 1 : 0, subcategories: JSON.stringify(data.subcategories || [])
-  });
+export async function upsertCategory(data: {
+  id: string; userId: number; name: string; icon: string; color: string;
+  type: string; isDefault: boolean; isFavorite: boolean; subcategories: string;
+}) {
+  await sql`
+    INSERT INTO categories (id, user_id, name, icon, color, type, is_default, is_favorite, subcategories)
+    VALUES (${data.id}, ${data.userId}, ${data.name}, ${data.icon}, ${data.color}, ${data.type}, ${data.isDefault}, ${data.isFavorite}, ${data.subcategories})
+    ON CONFLICT (id, user_id) DO UPDATE SET
+      name = EXCLUDED.name, icon = EXCLUDED.icon, color = EXCLUDED.color,
+      is_favorite = EXCLUDED.is_favorite, subcategories = EXCLUDED.subcategories
+  `;
 }
 
-export function deleteCategory(id: string, userId: number) {
-  getDb().prepare('DELETE FROM categories WHERE id = ? AND user_id = ?').run(id, userId);
+export async function deleteCategory(id: string, userId: number) {
+  await sql`DELETE FROM categories WHERE id = ${id} AND user_id = ${userId}`;
 }
 
-// ─── Transactions ─────────────────────────────────────────────
-export function getUserTransactions(userId: number) {
-  return getDb().prepare('SELECT * FROM transactions WHERE user_id = ?').all(userId) as any[];
+// ─── Transações ───────────────────────────────────────────────────────────────
+export async function getUserTransactions(userId: number) {
+  return sql`SELECT * FROM transactions WHERE user_id = ${userId} ORDER BY due_date DESC`;
 }
 
-export function upsertTransaction(data: any) {
-  getDb().prepare(`
-    INSERT INTO transactions (id, user_id, type, description, amount, paid_amount, category_id, category_name, subcategory_id, due_date, payment_date, status, recurrence, group_id, notes, updated_at)
-    VALUES (@id, @userId, @type, @description, @amount, @paidAmount, @categoryId, @categoryName, @subcategoryId, @dueDate, @paymentDate, @status, @recurrence, @groupId, @notes, datetime('now'))
-    ON CONFLICT(id) DO UPDATE SET
-      type=excluded.type, description=excluded.description, amount=excluded.amount,
-      paid_amount=excluded.paid_amount, category_id=excluded.category_id, category_name=excluded.category_name,
-      subcategory_id=excluded.subcategory_id, due_date=excluded.due_date, payment_date=excluded.payment_date,
-      status=excluded.status, recurrence=excluded.recurrence, group_id=excluded.group_id,
-      notes=excluded.notes, updated_at=datetime('now')
-  `).run({
-    id: data.id, userId: data.userId, type: data.type, description: data.description,
-    amount: data.amount, paidAmount: data.paidAmount ?? null, categoryId: data.categoryId,
-    categoryName: data.categoryName, subcategoryId: data.subcategoryId ?? null,
-    dueDate: data.dueDate, paymentDate: data.paymentDate ?? null, status: data.status,
-    recurrence: JSON.stringify(data.recurrence || { type: 'once' }),
-    groupId: data.groupId ?? null, notes: data.notes ?? null
-  });
+export async function upsertTransaction(data: {
+  id: string; userId: number; type: string; description: string; amount: number;
+  paidAmount?: number | null; categoryId: string; categoryName: string;
+  subcategoryId?: string | null; dueDate: string; paymentDate?: string | null;
+  status: string; recurrence: string; groupId?: string | null; notes?: string | null;
+}) {
+  await sql`
+    INSERT INTO transactions (id, user_id, type, description, amount, paid_amount, category_id, category_name,
+      subcategory_id, due_date, payment_date, status, recurrence, group_id, notes)
+    VALUES (${data.id}, ${data.userId}, ${data.type}, ${data.description}, ${data.amount},
+      ${data.paidAmount ?? null}, ${data.categoryId}, ${data.categoryName},
+      ${data.subcategoryId ?? null}, ${data.dueDate}, ${data.paymentDate ?? null},
+      ${data.status}, ${data.recurrence}, ${data.groupId ?? null}, ${data.notes ?? null})
+    ON CONFLICT (id, user_id) DO UPDATE SET
+      type = EXCLUDED.type, description = EXCLUDED.description, amount = EXCLUDED.amount,
+      paid_amount = EXCLUDED.paid_amount, category_id = EXCLUDED.category_id,
+      category_name = EXCLUDED.category_name, subcategory_id = EXCLUDED.subcategory_id,
+      due_date = EXCLUDED.due_date, payment_date = EXCLUDED.payment_date,
+      status = EXCLUDED.status, recurrence = EXCLUDED.recurrence,
+      group_id = EXCLUDED.group_id, notes = EXCLUDED.notes
+  `;
 }
 
-export function deleteTransaction(id: string, userId: number) {
-  getDb().prepare('DELETE FROM transactions WHERE id = ? AND user_id = ?').run(id, userId);
+export async function deleteTransaction(id: string, userId: number) {
+  await sql`DELETE FROM transactions WHERE id = ${id} AND user_id = ${userId}`;
 }
 
-export function deleteTransactionsByGroupId(groupId: string, userId: number) {
-  getDb().prepare('DELETE FROM transactions WHERE group_id = ? AND user_id = ?').run(groupId, userId);
+export async function deleteTransactionsByGroupId(groupId: string, userId: number) {
+  await sql`DELETE FROM transactions WHERE group_id = ${groupId} AND user_id = ${userId}`;
 }
 
-// ─── Investments ──────────────────────────────────────────────
-export function getUserInvestments(userId: number) {
-  return getDb().prepare('SELECT * FROM investments WHERE user_id = ?').all(userId) as any[];
+// ─── Investimentos ────────────────────────────────────────────────────────────
+export async function getUserInvestments(userId: number) {
+  return sql`SELECT * FROM investments WHERE user_id = ${userId}`;
 }
 
-export function upsertInvestment(data: any) {
-  getDb().prepare(`
-    INSERT INTO investments (id, user_id, description, type, planned_amount, actual_amount, month, year, updated_at)
-    VALUES (@id, @userId, @description, @type, @plannedAmount, @actualAmount, @month, @year, datetime('now'))
-    ON CONFLICT(id) DO UPDATE SET
-      description=excluded.description, type=excluded.type,
-      planned_amount=excluded.planned_amount, actual_amount=excluded.actual_amount,
-      month=excluded.month, year=excluded.year, updated_at=datetime('now')
-  `).run(data);
+export async function upsertInvestment(data: {
+  id: string; userId: number; description: string; type: string;
+  plannedAmount: number; actualAmount: number; month: number; year: number;
+}) {
+  await sql`
+    INSERT INTO investments (id, user_id, description, type, planned_amount, actual_amount, month, year)
+    VALUES (${data.id}, ${data.userId}, ${data.description}, ${data.type}, ${data.plannedAmount}, ${data.actualAmount}, ${data.month}, ${data.year})
+    ON CONFLICT (id, user_id) DO UPDATE SET
+      description = EXCLUDED.description, type = EXCLUDED.type,
+      planned_amount = EXCLUDED.planned_amount, actual_amount = EXCLUDED.actual_amount,
+      month = EXCLUDED.month, year = EXCLUDED.year
+  `;
 }
 
-export function deleteInvestment(id: string, userId: number) {
-  getDb().prepare('DELETE FROM investments WHERE id = ? AND user_id = ?').run(id, userId);
+export async function deleteInvestment(id: string, userId: number) {
+  await sql`DELETE FROM investments WHERE id = ${id} AND user_id = ${userId}`;
 }
 
-// ─── Patrimony ────────────────────────────────────────────────
-export function getUserPatrimonyItems(userId: number) {
-  return getDb().prepare('SELECT * FROM patrimony_items WHERE user_id = ?').all(userId) as any[];
+// ─── Patrimônio ───────────────────────────────────────────────────────────────
+export async function getUserPatrimonyItems(userId: number) {
+  return sql`SELECT * FROM patrimony_items WHERE user_id = ${userId}`;
 }
 
-export function upsertPatrimonyItem(data: any) {
-  getDb().prepare(`
-    INSERT INTO patrimony_items (id, user_id, name, item_type, category, purchase_value, appreciation, depreciation, debt_value, notes, updated_at)
-    VALUES (@id, @userId, @name, @itemType, @category, @purchaseValue, @appreciation, @depreciation, @debtValue, @notes, datetime('now'))
-    ON CONFLICT(id) DO UPDATE SET
-      name=excluded.name, item_type=excluded.item_type, category=excluded.category,
-      purchase_value=excluded.purchase_value, appreciation=excluded.appreciation,
-      depreciation=excluded.depreciation, debt_value=excluded.debt_value,
-      notes=excluded.notes, updated_at=datetime('now')
-  `).run(data);
+export async function upsertPatrimonyItem(data: {
+  id: string; userId: number; name: string; itemType: string; category: string;
+  purchaseValue: number; appreciation: number; depreciation: number;
+  debtValue: number; notes?: string | null;
+}) {
+  await sql`
+    INSERT INTO patrimony_items (id, user_id, name, item_type, category, purchase_value, appreciation, depreciation, debt_value, notes)
+    VALUES (${data.id}, ${data.userId}, ${data.name}, ${data.itemType}, ${data.category},
+      ${data.purchaseValue}, ${data.appreciation}, ${data.depreciation}, ${data.debtValue}, ${data.notes ?? null})
+    ON CONFLICT (id, user_id) DO UPDATE SET
+      name = EXCLUDED.name, item_type = EXCLUDED.item_type, category = EXCLUDED.category,
+      purchase_value = EXCLUDED.purchase_value, appreciation = EXCLUDED.appreciation,
+      depreciation = EXCLUDED.depreciation, debt_value = EXCLUDED.debt_value, notes = EXCLUDED.notes
+  `;
 }
 
-export function deletePatrimonyItem(id: string, userId: number) {
-  getDb().prepare('DELETE FROM patrimony_items WHERE id = ? AND user_id = ?').run(id, userId);
+export async function deletePatrimonyItem(id: string, userId: number) {
+  await sql`DELETE FROM patrimony_items WHERE id = ${id} AND user_id = ${userId}`;
 }
 
-// ─── Monthly Budgets ──────────────────────────────────────────
-export function getUserMonthlyBudgets(userId: number) {
-  return getDb().prepare('SELECT * FROM monthly_budgets WHERE user_id = ?').all(userId) as any[];
+// ─── Orçamentos ───────────────────────────────────────────────────────────────
+export async function getUserMonthlyBudgets(userId: number) {
+  return sql`SELECT * FROM monthly_budgets WHERE user_id = ${userId}`;
 }
 
-export function upsertMonthlyBudget(data: any) {
-  getDb().prepare(`
-    INSERT INTO monthly_budgets (id, user_id, category_id, month, year, planned_amount, updated_at)
-    VALUES (@id, @userId, @categoryId, @month, @year, @plannedAmount, datetime('now'))
-    ON CONFLICT(user_id, category_id, month, year) DO UPDATE SET
-      planned_amount=excluded.planned_amount, updated_at=datetime('now')
-  `).run(data);
+export async function upsertMonthlyBudget(data: {
+  id: string; userId: number; categoryId: string; month: number;
+  year: number; plannedAmount: number;
+}) {
+  await sql`
+    INSERT INTO monthly_budgets (id, user_id, category_id, month, year, planned_amount)
+    VALUES (${data.id}, ${data.userId}, ${data.categoryId}, ${data.month}, ${data.year}, ${data.plannedAmount})
+    ON CONFLICT (id, user_id) DO UPDATE SET
+      category_id = EXCLUDED.category_id, month = EXCLUDED.month,
+      year = EXCLUDED.year, planned_amount = EXCLUDED.planned_amount
+  `;
 }

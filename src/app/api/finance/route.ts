@@ -1,25 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as db from '@/lib/db';
 import { getSession } from '@/lib/auth';
+import { initDb } from '@/lib/db';
 
-async function requireAuth(req: NextRequest) {
+let dbInitialized = false;
+async function ensureDb() {
+  if (!dbInitialized) {
+    await initDb();
+    dbInitialized = true;
+  }
+}
+
+async function requireAuth() {
   const session = await getSession();
   if (!session) return null;
   return session;
 }
 
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(req);
+  await ensureDb();
+  const session = await requireAuth();
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
   const userId = session.userId;
-  const rawCategories = db.getUserCategories(userId);
-  const rawTransactions = db.getUserTransactions(userId);
-  const rawInvestments = db.getUserInvestments(userId);
-  const rawPatrimony = db.getUserPatrimonyItems(userId);
-  const rawBudgets = db.getUserMonthlyBudgets(userId);
+  const [rawCategories, rawTransactions, rawInvestments, rawPatrimony, rawBudgets] = await Promise.all([
+    db.getUserCategories(userId),
+    db.getUserTransactions(userId),
+    db.getUserInvestments(userId),
+    db.getUserPatrimonyItems(userId),
+    db.getUserMonthlyBudgets(userId),
+  ]);
 
-  // Parse JSON fields
   const categories = rawCategories.map((c: any) => ({
     id: c.id, name: c.name, icon: c.icon, color: c.color,
     type: c.type, isDefault: !!c.is_default, isFavorite: !!c.is_favorite,
@@ -28,39 +39,38 @@ export async function GET(req: NextRequest) {
 
   const transactions = rawTransactions.map((t: any) => ({
     id: t.id, type: t.type, description: t.description,
-    amount: t.amount, paidAmount: t.paid_amount,
+    amount: Number(t.amount), paidAmount: t.paid_amount ? Number(t.paid_amount) : null,
     categoryId: t.category_id, categoryName: t.category_name,
     subcategoryId: t.subcategory_id, dueDate: t.due_date,
     paymentDate: t.payment_date, status: t.status,
     recurrence: JSON.parse(t.recurrence || '{"type":"once"}'),
     groupId: t.group_id, notes: t.notes,
-    createdAt: t.created_at, updatedAt: t.updated_at,
   }));
 
   const investments = rawInvestments.map((i: any) => ({
     id: i.id, description: i.description, type: i.type,
-    plannedAmount: i.planned_amount, actualAmount: i.actual_amount,
+    plannedAmount: Number(i.planned_amount), actualAmount: Number(i.actual_amount),
     month: i.month, year: i.year,
-    createdAt: i.created_at, updatedAt: i.updated_at,
   }));
 
   const patrimonyItems = rawPatrimony.map((p: any) => ({
     id: p.id, name: p.name, itemType: p.item_type, category: p.category,
-    purchaseValue: p.purchase_value, appreciation: p.appreciation,
-    depreciation: p.depreciation, debtValue: p.debt_value,
-    notes: p.notes, createdAt: p.created_at, updatedAt: p.updated_at,
+    purchaseValue: Number(p.purchase_value), appreciation: Number(p.appreciation),
+    depreciation: Number(p.depreciation), debtValue: Number(p.debt_value),
+    notes: p.notes,
   }));
 
   const monthlyBudgets = rawBudgets.map((b: any) => ({
     id: b.id, categoryId: b.category_id, month: b.month, year: b.year,
-    plannedAmount: b.planned_amount,
+    plannedAmount: Number(b.planned_amount),
   }));
 
   return NextResponse.json({ categories, transactions, investments, patrimonyItems, monthlyBudgets });
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(req);
+  await ensureDb();
+  const session = await requireAuth();
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
   const userId = session.userId;
@@ -69,47 +79,54 @@ export async function POST(req: NextRequest) {
 
   try {
     if (action === 'upsert-category') {
-      db.upsertCategory({ ...data, userId });
+      await db.upsertCategory({
+        ...data, userId,
+        subcategories: JSON.stringify(data.subcategories || []),
+      });
       return NextResponse.json({ success: true });
     }
     if (action === 'delete-category') {
-      db.deleteCategory(data.id, userId);
+      await db.deleteCategory(data.id, userId);
       return NextResponse.json({ success: true });
     }
     if (action === 'upsert-transaction') {
-      db.upsertTransaction({ ...data, userId });
+      await db.upsertTransaction({
+        ...data, userId,
+        recurrence: JSON.stringify(data.recurrence || { type: 'once' }),
+      });
       return NextResponse.json({ success: true });
     }
     if (action === 'delete-transaction') {
-      db.deleteTransaction(data.id, userId);
+      await db.deleteTransaction(data.id, userId);
       return NextResponse.json({ success: true });
     }
     if (action === 'delete-transactions-group') {
-      db.deleteTransactionsByGroupId(data.groupId, userId);
+      await db.deleteTransactionsByGroupId(data.groupId, userId);
       return NextResponse.json({ success: true });
     }
     if (action === 'upsert-investment') {
-      db.upsertInvestment({ ...data, userId });
+      await db.upsertInvestment({ ...data, userId });
       return NextResponse.json({ success: true });
     }
     if (action === 'delete-investment') {
-      db.deleteInvestment(data.id, userId);
+      await db.deleteInvestment(data.id, userId);
       return NextResponse.json({ success: true });
     }
     if (action === 'upsert-patrimony') {
-      db.upsertPatrimonyItem({ ...data, userId });
+      await db.upsertPatrimonyItem({ ...data, userId });
       return NextResponse.json({ success: true });
     }
     if (action === 'delete-patrimony') {
-      db.deletePatrimonyItem(data.id, userId);
+      await db.deletePatrimonyItem(data.id, userId);
       return NextResponse.json({ success: true });
     }
     if (action === 'upsert-budget') {
-      db.upsertMonthlyBudget({ ...data, userId });
+      await db.upsertMonthlyBudget({ ...data, userId });
       return NextResponse.json({ success: true });
     }
     return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
   } catch (err: any) {
+    console.error('[finance API error]', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
