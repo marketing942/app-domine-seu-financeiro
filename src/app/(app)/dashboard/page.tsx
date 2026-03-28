@@ -1,11 +1,62 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '@/lib/finance-context';
 import { formatCurrency, getMonthName, isOverdue, isDueToday, isDueSoon } from '@/lib/utils';
 import { TrendingUp, TrendingDown, Wallet, AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Link from 'next/link';
+import { useSession } from '@/hooks/use-session';
+
+function getGreeting(hour: number): string {
+  if (hour >= 5 && hour < 12) return 'Bom dia';
+  if (hour >= 12 && hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+function DashboardHeader() {
+  const { user } = useSession();
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!now) return null;
+
+  const hour = now.getHours();
+  const greeting = getGreeting(hour);
+
+  const firstName = user?.name?.split(' ')[0] ?? '';
+
+  const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const dateStr = now.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+  // Capitaliza a primeira letra
+  const dateCap = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
+  return (
+    <div className="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 rounded-xl p-5 text-white shadow-sm mb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold">
+            {greeting}{firstName ? `, ${firstName}` : ''}! 👋
+          </h2>
+          <p className="text-primary-100 text-sm mt-0.5">{dateCap}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-3xl font-mono font-semibold tracking-wider">{timeStr}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { transactions, categories, loading } = useFinance();
@@ -75,6 +126,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Saudação com horário e data */}
+      <DashboardHeader />
+
       {/* Month selector */}
       <div className="flex items-center gap-3">
         <button onClick={prevMonth} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition">

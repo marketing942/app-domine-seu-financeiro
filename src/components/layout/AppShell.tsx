@@ -5,6 +5,7 @@ import { FinanceProvider } from '@/lib/finance-context';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import TransactionModal from '@/components/modals/TransactionModal';
+import { Instagram, Share2 } from 'lucide-react';
 
 interface User {
   id: number;
@@ -27,6 +28,43 @@ const AppUIContext = createContext<AppUIContextType>({
 
 export function useAppUI() {
   return useContext(AppUIContext);
+}
+
+function AppFooter() {
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://dominiodofinanceiro.vercel.app';
+  const whatsappText = encodeURIComponent(
+    `💰 Estou usando o *Domínio Financeiro* para organizar minhas finanças!\n\nÉ gratuito e muito fácil de usar. Acesse agora: ${appUrl}`
+  );
+  const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
+
+  return (
+    <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+      {/* Crédito do idealizador */}
+      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <span>Idealizador do App:</span>
+        <a
+          href="https://www.instagram.com/prof.evertonmota"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 font-medium transition-colors"
+        >
+          <Instagram size={13} />
+          @prof.evertonmota
+        </a>
+      </div>
+
+      {/* Botão compartilhar no WhatsApp */}
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1.5 text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors shadow-sm"
+      >
+        <Share2 size={12} />
+        Compartilhar no WhatsApp
+      </a>
+    </footer>
+  );
 }
 
 export default function AppShell({ children, user }: { children: React.ReactNode; user: User }) {
@@ -67,6 +105,7 @@ export default function AppShell({ children, user }: { children: React.ReactNode
             <main className="flex-1 overflow-y-auto p-4 md:p-6">
               {children}
             </main>
+            <AppFooter />
           </div>
         </div>
 
