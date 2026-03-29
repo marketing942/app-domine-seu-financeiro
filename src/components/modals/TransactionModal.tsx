@@ -38,6 +38,12 @@ export default function TransactionModal({ transaction, onClose }: Props) {
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(transaction?.recurrence?.type || 'once');
   const [installments, setInstallments] = useState(transaction?.recurrence?.installments || 2);
   const [notes, setNotes] = useState(transaction?.notes || '');
+  const [paidAmount, setPaidAmount] = useState(
+    transaction?.paidAmount ? (transaction.paidAmount / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''
+  );
+  const [paymentDate, setPaymentDate] = useState(
+    transaction?.paymentDate ? transaction.paymentDate.split('-').reverse().join('/') : ''
+  );
 
   const filteredCategories = categories.filter(c => c.type === type);
   const selectedCategory = categories.find(c => c.id === categoryId);
@@ -73,6 +79,10 @@ export default function TransactionModal({ transaction, onClose }: Props) {
           ? { type: recurrenceType, installments, currentInstallment: 1 }
           : { type: recurrenceType },
         notes: notes.trim() || undefined,
+        paidAmount: (status === 'paid' || status === 'received' || status === 'partial') && paidAmount
+          ? parseCurrency(paidAmount)
+          : undefined,
+        paymentDate: paymentDate ? parseDate(paymentDate) ?? undefined : undefined,
       };
 
       if (transaction) {
@@ -199,6 +209,21 @@ export default function TransactionModal({ transaction, onClose }: Props) {
             </div>
           )}
 
+          {(status === 'paid' || status === 'received' || status === 'partial') && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valor pago (R$)</label>
+                <input value={paidAmount} onChange={e => setPaidAmount(maskCurrency(e.target.value))} placeholder="0,00"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data do pagamento</label>
+                <input value={paymentDate} onChange={e => setPaymentDate(maskDate(e.target.value))} placeholder="DD/MM/AAAA" maxLength={10}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] text-sm" />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observações (opcional)</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Notas adicionais..."
@@ -211,7 +236,7 @@ export default function TransactionModal({ transaction, onClose }: Props) {
               Cancelar
             </button>
             <button type="submit" disabled={loading}
-              className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white rounded-lg transition text-sm font-semibold flex items-center justify-center gap-2">
+              className="flex-1 py-2.5 bg-[#1E3A5F] hover:bg-[#182F4C] disabled:opacity-60 text-white rounded-lg transition text-sm font-semibold flex items-center justify-center gap-2">
               {loading && <Loader2 size={16} className="animate-spin" />}
               {loading ? 'Salvando...' : transaction ? 'Salvar' : 'Adicionar'}
             </button>

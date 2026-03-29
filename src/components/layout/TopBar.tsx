@@ -6,15 +6,17 @@ import Link from 'next/link';
 import { useAppUI } from './AppShell';
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Dashboard',
+  '/dashboard':    'Dashboard',
   '/transactions': 'Transações',
-  '/categories': 'Categorias',
-  '/budget': 'Orçamento',
-  '/investments': 'Investimentos',
-  '/patrimony': 'Patrimônio',
-  '/reports': 'Relatórios',
-  '/alerts': 'Alertas',
-  '/settings': 'Configurações',
+  '/categories':   'Categorias',
+  '/budget':       'Orçamento',
+  '/investments':  'Investimentos',
+  '/patrimony':    'Patrimônio',
+  '/reports':      'Relatórios',
+  '/alerts':       'Alertas',
+  '/settings':     'Configurações',
+  '/how-to-use':   'Como utilizar?',
+  '/lifeboard':    'Life Board',
 };
 
 interface TopBarProps {
@@ -44,7 +46,7 @@ export default function TopBar({ user }: TopBarProps) {
         {/* Botão Nova Transação — abre modal global */}
         <button
           onClick={openNewTransaction}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-3 md:px-4 py-2 rounded-lg transition"
+          className="flex items-center gap-2 bg-[#1E3A5F] hover:bg-[#182F4C] text-white text-sm font-medium px-3 md:px-4 py-2 rounded-lg transition shadow-sm"
         >
           <Plus size={16} />
           <span className="hidden sm:inline">Nova transação</span>

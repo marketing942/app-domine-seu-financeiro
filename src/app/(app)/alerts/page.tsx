@@ -15,7 +15,7 @@ export default function AlertsPage() {
     return { overdue, today, soon };
   }, [transactions]);
 
-  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 size={32} className="animate-spin text-primary-600" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 size={32} className="animate-spin text-[#1E3A5F]" /></div>;
 
   const totalAlerts = overdue.length + today.length + soon.length;
 

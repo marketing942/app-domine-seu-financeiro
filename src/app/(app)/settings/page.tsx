@@ -61,7 +61,7 @@ export default function SettingsPage() {
           { key: 'appearance', label: 'Aparência', icon: Sun },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === key ? 'border-primary-600 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === key ? 'border-[#1E3A5F] text-[#1E3A5F] dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
             <Icon size={16} /> {label}
           </button>
         ))}
@@ -108,7 +108,7 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
             <button type="submit" disabled={savingPassword}
-              className="w-full py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2">
+              className="w-full py-2.5 bg-[#1E3A5F] hover:bg-[#182F4C] disabled:opacity-60 text-white rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2">
               {savingPassword && <Loader2 size={15} className="animate-spin" />}
               {savingPassword ? 'Salvando...' : 'Alterar senha'}
             </button>
@@ -131,19 +131,19 @@ export default function SettingsPage() {
                   onClick={() => setTheme(value)}
                   className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
                     active
-                      ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20'
+                      ? 'border-[#1E3A5F] bg-blue-50 dark:bg-blue-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                   }`}
                 >
-                  <div className={`p-3 rounded-full ${active ? 'bg-primary-100 dark:bg-primary-800 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                  <div className={`p-3 rounded-full ${active ? 'bg-blue-100 dark:bg-blue-900 text-[#1E3A5F] dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                     {icon}
                   </div>
                   <div className="text-center">
-                    <p className={`text-sm font-semibold ${active ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-white'}`}>{label}</p>
+                    <p className={`text-sm font-semibold ${active ? 'text-[#1E3A5F] dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>{label}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
                   </div>
                   {active && (
-                    <div className="w-2 h-2 rounded-full bg-primary-600 dark:bg-primary-400" />
+                    <div className="w-2 h-2 rounded-full bg-[#1E3A5F] dark:bg-blue-400" />
                   )}
                 </button>
               );

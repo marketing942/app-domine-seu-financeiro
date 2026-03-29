@@ -22,3 +22,17 @@
 ## Melhorias v5
 - [x] Página "Conheça o APP Life Board" na sidebar (acima de Configurações)
 - [x] Página "Como utilizar?" com documentação completa do app (acima de Configurações)
+
+## Refatoração completa v6
+- [x] Restaurar logo original (D$ azul marinho) e atualizar favicon
+- [x] Identidade visual financeira: sidebar com gradiente, ícones financeiros, cores profissionais
+- [x] Dashboard: cards Previsto vs Realizado (receitas e despesas)
+- [x] Dashboard: painel de Investimentos (meta vs atingido por tipo)
+- [x] Dashboard: painel de Patrimônio Líquido
+- [x] Dashboard: Alertas e Pendências melhorados
+- [x] Dashboard: lançamentos recentes com edição inline
+- [x] Transações: modal de edição completo com todos os campos
+- [x] Relatórios: relatório mensal detalhado (previsto vs realizado)
+- [x] Relatórios: relatório de investimentos anual
+- [x] Relatórios: relatório de patrimônio
+- [x] Relatórios: tabela detalhada por categoria
